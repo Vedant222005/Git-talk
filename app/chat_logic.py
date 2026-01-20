@@ -36,18 +36,17 @@ def get_chatbot_response(user_query, target_repo_id):
         print("vector store initialized")
 
         retriever = vector_store.as_retriever(
-            search_type="mmr",
+            search_type="similarity",
             search_kwargs={
                 "k": 5,
                 "pre_filter": {"repo_id": {"$eq": target_repo_id}}
             }
         )
-
+        
         docs = retriever.invoke(user_query)
         
         
         context_text = "\n\n".join(doc.page_content for doc in docs)
-        print(context_text)
 
         prompt = chat_template.format(
             target_repo_id=target_repo_id,
@@ -55,9 +54,12 @@ def get_chatbot_response(user_query, target_repo_id):
             user_query=user_query
         )
 
+        # Extract unique sources
+        sources = {doc.metadata.get("file_path", "Unknown File") for doc in docs}
+        
         response = llm.invoke(prompt)
-        return response.content
+        return response.content, list(sources)
 
     except Exception as e:
         print(f"Error: {e}")
-        return "Sorry, I encountered an error."
+        return "Sorry, I encountered an error.", []

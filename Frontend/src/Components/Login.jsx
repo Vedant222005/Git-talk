@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as api from '../api';
+import toast from 'react-hot-toast';
 
 const Login = ({ setUser }) => {
     const [isRegister, setIsRegister] = useState(false);
@@ -26,7 +27,7 @@ const Login = ({ setUser }) => {
             if (isRegister) {
                 if (!formData.username) throw new Error("Username is required");
                 await api.register(formData);
-                alert('Registration successful! Please login.');
+                toast.success('Registration successful! Please login.');
                 setIsRegister(false);
             } else {
                 const { data } = await api.login({ email: formData.email, password: formData.password });

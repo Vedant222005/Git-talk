@@ -6,6 +6,7 @@ from langchain_community.document_loaders import GitLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter, Language
 import time
 
+
 EXTENSION_MAP = {
     ".py": Language.PYTHON, ".js": Language.JS, ".ts": Language.TS,
     ".java": Language.JAVA, ".cpp": Language.CPP, ".go": Language.GO,
@@ -25,10 +26,7 @@ def clean_dir(path):
             except OSError:
                 time.sleep(0.5)
 
-def process_repo_optimal(repo_url, branch):
-    # 1. Generate Unique ID (e.g., "omgholap11/TicTacToeGame")
-    parts = repo_url.rstrip("/").split("/")
-    unique_repo_id = f"{parts[-2]}/{parts[-1].replace('.git', '')}"
+def process_repo_optimal(repo_url,unique_repo_id, branch="main"):
     
     print(f"🆔 Processing Unique ID: {unique_repo_id}")
 

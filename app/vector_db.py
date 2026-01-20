@@ -8,18 +8,20 @@ from pymongo import MongoClient
 from embedding import get_collection , embeddings
 
 load_dotenv()
+connection_string= os.getenv('MONGODB_ATLAS_URI')
+database_name = "github_explorer"
+collection_name = "code_chunks"
+collection = get_collection(connection_string, database_name, collection_name)
 
-
-        # Initialize Vector Store
-def initialize_vector_store (collection_name , connection_string ,database_name) :
-
-    collection = get_collection(connection_string, database_name, collection_name)
-
-    vector_store = MongoDBAtlasVectorSearch(
+vector_store = MongoDBAtlasVectorSearch(
             collection=collection,
             embedding=embeddings,
             index_name="vector_index" 
     )
+
+        # Initialize Vector Store
+def initialize_vector_store (collection_name , connection_string ,database_name):
+
     return vector_store 
 
 def setup_ttl_index(connection_string, database_name, collection_name):
@@ -30,7 +32,7 @@ def setup_ttl_index(connection_string, database_name, collection_name):
     
     # CRITICAL: We index "metadata.created_at" because that's where we store the time
     collection.create_index("metadata.created_at", expireAfterSeconds=172800)
-    print("⏳ TTL Index verified: Data will auto-delete after 48 hours of inactivity.")
+    print("TTL Index verified: Data will auto-delete after 48 hours of inactivity.")
 
 
 def refresh_repo_timestamp(repo_id,connection_string, database_name, collection_name):
@@ -47,7 +49,7 @@ def refresh_repo_timestamp(repo_id,connection_string, database_name, collection_
             {"$set": {"metadata.created_at": datetime.utcnow()}} 
         )
     except Exception as e:
-        print(f"⚠️ Failed to refresh timestamp: {e}")
+        print(f"Failed to refresh timestamp: {e}")
 
 
 def create_embeddings_and_store(chunks, connection_string, database_name, collection_name):
@@ -79,9 +81,10 @@ def create_embeddings_and_store(chunks, connection_string, database_name, collec
         # Ensure the auto-delete rule is active
         setup_ttl_index(connection_string, database_name, collection_name)
         
-        print("🎉 Success! Code stored.")
+        print("Success! Code stored.")
         return vector_store
 
     except Exception as e:
-        print(f"❌ Error in Embedding: {e}")
+        print(f" Error in Embedding: {e}")
         return None
+    

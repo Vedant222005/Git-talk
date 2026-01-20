@@ -1,26 +1,48 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import * as api from '../api';
+import { toast } from 'react-hot-toast';
 
 const Dashboard = ({ onLogout, user }) => {
     const [githubUrl, setGithubUrl] = useState('');
+    const [branch, setBranch] = useState('main');
     const [isLoading, setIsLoading] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const navigate = useNavigate();
 
-    const handleStartChat = () => {
+    const handleStartChat = async () => {
         if (!githubUrl.trim()) return;
+        setIsLoading(true);
 
-        // Extract repo name from URL (simple parsing)
-        const urlParts = githubUrl.split('/');
-        const repoName = urlParts[urlParts.length - 1] || urlParts[urlParts.length - 2];
+        try {
+            // 1. Ingest Repo
+            await api.ingestRepo({ repoUrl: githubUrl, branch });
 
-        // Navigate to chat with repo param
-        navigate(`/chat/${repoName}`);
+            // 2. Parse details for navigation
+            const cleanUrl = githubUrl.replace(/\/$/, "");
+            const urlParts = cleanUrl.split('/');
+            if (urlParts.length < 2) throw new Error("Invalid URL");
+
+            const repo = urlParts[urlParts.length - 1];
+            const owner = urlParts[urlParts.length - 2];
+
+            // 3. Navigate
+            navigate(`/chat/${owner}/${repo}/${encodeURIComponent(branch)}`);
+        } catch (e) {
+            console.error(e);
+            toast.error("Failed to ingest repository. Please check url and branch again.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const loadChat = (selectedRepoName) => {
-        navigate(`/chat/${selectedRepoName}`);
+    const loadChat = (repoId) => {
+        // repoId should now be "owner/repo/branch"
+        // We need to split it to navigate correctly, OR change App.jsx to match full string.
+        // Easiest is to navigate to the constructed path. 
+        // NOTE: The Sidebar passes the full repoId string.
+        navigate(`/chat/${repoId}`);
     };
 
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
@@ -92,13 +114,45 @@ const Dashboard = ({ onLogout, user }) => {
                                     />
                                 </div>
 
+                                {/* [NEW] Branch Input */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-400 mb-2">
+                                        Branch Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={branch}
+                                        onChange={(e) => setBranch(e.target.value)}
+                                        placeholder="main"
+                                        className="w-full p-4 bg-black/40 border border-white/10 rounded-xl text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all"
+                                    />
+                                </div>
+
                                 <button
                                     onClick={handleStartChat}
                                     disabled={!githubUrl.trim() || isLoading}
-                                    className="w-full bg-gradient-to-r from-primary to-emerald-400 hover:to-emerald-300 text-background-dark font-bold p-4 rounded-xl transition-all shadow-lg shadow-primary/20 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+                                    className="w-full bg-gradient-to-r from-primary to-emerald-400 hover:to-emerald-300 text-background-dark font-bold p-4 rounded-xl transition-all shadow-lg shadow-primary/20 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                                 >
-                                    {isLoading ? 'Starting Chat...' : 'Start Chat'}
+                                    {isLoading ? (
+                                        <>
+                                            <svg className="animate-spin h-5 w-5 text-background-dark" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            <span>Ingesting Repository...</span>
+                                        </>
+                                    ) : (
+                                        'Start Chat'
+                                    )}
                                 </button>
+
+                                {isLoading && (
+                                    <div className="text-center animate-pulse">
+                                        <p className="text-sm text-emerald-400 font-medium">
+                                            This process may take a few minutes depending on the repository size.
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

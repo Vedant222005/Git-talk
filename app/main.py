@@ -7,7 +7,34 @@ from embedding import get_collection
 
 load_dotenv()
 # print("✓ Environment variables loaded")
+def get_repo_info(repo_url, branch):
+    try:
+        parts=repo_url.rstrip("/").split("/")
+        owner=parts[-2]
+        repo_name=parts[-1].replace(".git","")
+        api_url=f"https://api.github.com/repos/{owner}/{repo_name}"
+        response=requests.get(api_url)
 
+        if response.status_code==200:
+            data=response.json()
+            size_kb=data.get("size",0)
+            size_mb=size_kb/1024
+            print(f"Repository: {owner}/{repo_name}")
+            print(f"Size: {size_mb:.2f} MB")
+          
+            if(size_mb>50):
+                print(f"Repo too large (> {max_size_mb} MB).")
+                return False
+            else:
+                print("Size is within limits.")
+                return True
+        else:
+            print(f"Error checking repo: {response.status_code} - {response.reason}")
+            return False
+    except Exception as e:
+        print(f"Error: {e}")
+        return False
+    
 def check_if_repo_exists(repo_id, connection_string, database_name, collection_name):
     """
     Returns True if the repo is already indexed in MongoDB.
